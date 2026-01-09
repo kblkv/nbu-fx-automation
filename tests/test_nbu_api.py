@@ -5,12 +5,10 @@ from datetime import datetime
 
 def test_nbu_usd_rate_today():
     """
-    Purpose: Check if NBU provides the correct USD rate for the current date.
-    This helps to automate daily financial data monitoring.
+    Check if NBU provides the correct USD rate for the current date for automated daily financial data monitoring.
     """
 
     # 1. Prepare today's date in the format NBU API expects (YYYYMMDD)
-    # I used datetime here so there's no need to change the date manually every day.
     today_str = datetime.now().strftime("%Y%m%d")
 
     # 2. Define the endpoint with dynamic date
@@ -34,7 +32,7 @@ def test_nbu_usd_rate_today():
             print(f"[Warning] No data found for {today_str}. The rate might not be published yet.")
             return  # Exit if no data; not necessarily fail the test
 
-        # Extracting specific fields for report
+        # Getting specific fields for report
         usd_info = data[0]
         rate = usd_info.get('rate')
         currency_name = usd_info.get('txt')
