@@ -1,49 +1,39 @@
 import requests
-import pytest
+import csv
+import os
 from datetime import datetime
 
 
-def test_nbu_usd_rate_today():
-    """
-    Check if NBU provides the correct USD rate for the current date for automated daily financial data monitoring.
-    """
+def test_nbu_export():
+    # Retrieve date
+    today = datetime.now().strftime("%Y%m%d")
+    url = f"https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=USD&date={today}&json"
 
-    # 1. Prepare today's date in the format NBU API expects (YYYYMMDD)
-    today_str = datetime.now().strftime("%Y%m%d")
+    # Retrieve data
+    response = requests.get(url)
+    data = response.json()
 
-    # 2. Define the endpoint with dynamic date
-    api_url = f"https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=USD&date={today_str}&json"
+    # Specify fields
+    rate = data[0]['rate']
+    currency = data[0]['txt']
+    date_for_report = datetime.now().strftime("%d.%m.%Y %H:%M")
 
-    print(f"\n[Action] Fetching current USD rate from NBU API...")
-    print(f"[Details] Request URL: {api_url}")
+    # Prepare report
+    report_file = "reports/fx_report.csv"
 
-    try:
-        # 3. Send request and get the response
-        response = requests.get(api_url, timeout=10)
+    # Check existing file
+    file_exists = os.path.isfile(report_file)
 
-        # Check if the connection was successful
-        if response.status_code != 200:
-            pytest.fail(f"API is not responding properly. Status code: {response.status_code}")
+    with open(report_file, "a", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
 
-        data = response.json()
+        # If not exist, add column names
+        if not file_exists:
+            writer.writerow(["Date", "Currency", "Rate"])
 
-        # 4. Process and validate the data
-        if not data:
-            print(f"[Warning] No data found for {today_str}. The rate might not be published yet.")
-            return  # Exit if no data; not necessarily fail the test
+        # Add row with data
+        writer.writerow([date_for_report, currency, rate])
 
-        # Getting specific fields for report
-        usd_info = data[0]
-        rate = usd_info.get('rate')
-        currency_name = usd_info.get('txt')
-        official_date = usd_info.get('exchangedate')
-
-        print(f"[Result] {currency_name} rate is {rate} UAH (Official NBU date: {official_date})")
-
-        # Basic business rules validation
-        assert rate > 0, "Exchange rate must be a positive number"
-        assert "USD" in api_url, "The request was not for USD"
-
-    except Exception as error:
-        print(f"[Error] Something went wrong with the API call: {error}")
-        raise error
+    # Validation
+    assert rate > 0
+    print(f"Success. Saved rate: {rate}")
